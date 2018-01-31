@@ -86,9 +86,12 @@ def load_pos_data(pos_list, format):
     return data
 
 
-class Technicals:
+class HistoricTechnicals:
     """
     Supports pandas dataframes. Contains many functions for technical analysis.
+    Many of these functions won't work with live data. Will either make a new class
+    for instantaneous updates or redo this and backload the work of figuring out
+    proper inputs.
     Indicators:
         * CCI
 
@@ -113,3 +116,72 @@ class Technicals:
         tp = (self.data['High'] + self.data['Low'] + self.data['Close']) / 3
         cci = pd.Series((tp - tp.rolling(roll_window).mean()) / (0.015 * tp.rolling(roll_window).std()))
         return np.array(cci)
+
+    # simple moving average
+    def sma(self, roll_window):
+        """
+        :param:
+        roll_window: size of the window for calculating rolling_mean and rolling_std.
+
+        :return:
+        sma transform array
+        """
+        return np.array(self.data['Close'].rolling(roll_window).mean())
+
+    # exponentially-weighted moving average
+    def ewma(self, roll_window):
+        """
+        :param:
+        roll_window: size of the convolution window
+
+        :return:
+        ewma transform array
+        """
+        return np.array(pd.ewma(self.data['Close'], span=roll_window, min_periods=roll_window - 1))
+
+    def rate(self, dt):
+        """
+        :param:
+        dt: time differential over which the change is calculated
+
+        :return:
+        rate of change array
+        """
+        n = self.data['Close'].diff(dt)
+        d = self.data['Close'].shift(dt)
+
+        return np.array(n/d)
+
+    def bollingers(self, roll_window):
+        """
+        :param:
+        roll_window: size of the convolution window
+
+        :return:
+        2xDates array, [0] = Upper Band, [1] = Lower Band
+        """
+        mean = self.data['Close'].rolling(roll_window).mean()
+        std = self.data['Close'].rolling(roll_window).std()
+        upper = mean + (2*std)
+        lower = mean - (2*std)
+        return np.array([upper, lower])
+
+    def force_ix(self, dt):
+        """
+        :param:
+        dt: time differential over which the change is calculated
+
+        :return:
+        force_index numpy array
+        """
+        return np.array(self.data['Close'].diff(dt) * self.data['Volume'])
+
+    def macd(self):
+        """
+        :param:
+        None. :D
+
+        :return:
+        macd numpy array
+        """
+        return self.ewma(12) - self.ewma(26)
