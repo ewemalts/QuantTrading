@@ -6,12 +6,15 @@ import time
 import re
 
 
-def load_prices(pos_list, dates):
+def get_prices(pos_list, dates):
     """
-    pos_list is a list of tickers
+    :param:
+    pos_list: list of tickers
     dates is a list of two dates in order from earliest to latest (mm/dd/yyyy)
-    returns an array of prices and dates with same index as pos_list
     Ex. load_prices(['DGAZ'], ['12/12/2011', '12/21/2014'])
+
+    :return:
+    array of prices and dates with same index as pos_list
     """
 
     # convert to unix time and verify dates
@@ -51,6 +54,62 @@ def load_prices(pos_list, dates):
                 handle.write(block)
 
 
+def load_pos_data(pos_list, format):
+    """
+    Loads csvs.
+
+    :param:
+    pos_list: list of of tickers you want to load from local (must have the data pre-downloaded)
+    format: "df" (for pandas dataframe), "arr" (for numpy array).
+
+    :return:
+    list:
+        |7 arrays: [Pos, Date, Open, High, Low, Close, Adj Close, Volume]|,
+        |dataframe: Date, Open, High, Low, Close, Adj Close, Volume|
+    """
+
+    # load the data into pandas for each pos and append to data
+    data = []
+    for pos in pos_list:
+        df = pd.read_csv('%s.csv' % pos)
+        df.name = pos
+
+        if format == 'arr':
+            # transpose the values so each row is a column from the spreadsheet
+            values = df.values.T
+            date, opn, high, low, close, adjc, volume = values[0], values[1], values[2], values[3], values[4], \
+                                                        values[5], values[6]
+            data.append([pos, date, opn, high, low, close, adjc, volume])
+
+        else:
+            data.append(df)
+    return data
 
 
+class Technicals:
+    """
+    Supports pandas dataframes. Contains many functions for technical analysis.
+    Indicators:
+        * CCI
 
+    :param:
+    data: dataframe format from load_pos_data(..., format='df')
+
+    :return:
+    1D numpy array of transformed data.
+    """
+    def __init__(self, data):
+        self.data = data
+
+    # commodity channel index
+    def cci(self, roll_window):
+        """
+        :param:
+        roll_window: size of the window for calculating rolling_mean and rolling_std.
+
+        :return:
+        cci transform array
+        """
+        tp = (self.data['High'] + self.data['Low'] + self.data['Close']) / 3
+        cci = pd.Series((tp - tp.rolling(roll_window).mean()) / (0.015 * tp.rolling(roll_window).std()))
+        return np.array(cci)
