@@ -4,6 +4,7 @@ import requests
 import datetime
 import time
 import re
+import intriniorealtime
 
 
 def get_prices(pos_list, dates):
@@ -16,6 +17,8 @@ def get_prices(pos_list, dates):
     :return:
     array of prices and dates with same index as pos_list
     """
+    # check inputs and make sure they are in the right format
+    assert (type(dates) == list and type(pos_list) == list), 'Check input formatting.'
 
     # convert to unix time and verify dates
     valid_dates = np.array([int(date.strip('\n')) for date in list(open('Valid Dates', 'r'))])
@@ -54,13 +57,13 @@ def get_prices(pos_list, dates):
                 handle.write(block)
 
 
-def load_pos_data(pos_list, format):
+def load_pos_data(pos_list, return_format):
     """
     Loads csvs.
 
     :param:
     pos_list: list of of tickers you want to load from local (must have the data pre-downloaded)
-    format: "df" (for pandas dataframe), "arr" (for numpy array).
+    format: "df" (for pandas dataframe), "np" (for numpy array).
 
     :return:
     list:
@@ -68,13 +71,16 @@ def load_pos_data(pos_list, format):
         |dataframe: Date, Open, High, Low, Close, Adj Close, Volume|
     """
 
+    # check input format
+    assert (type(pos_list) == list and type(return_format) == str), 'Check input formatting.'
+
     # load the data into pandas for each pos and append to data
     data = []
     for pos in pos_list:
         df = pd.read_csv('%s.csv' % pos)
         df.name = pos
 
-        if format == 'arr':
+        if return_format == 'np':
             # transpose the values so each row is a column from the spreadsheet
             values = df.values.T
             date, opn, high, low, close, adjc, volume = values[0], values[1], values[2], values[3], values[4], \
@@ -94,6 +100,12 @@ class HistoricTechnicals:
     proper inputs.
     Indicators:
         * CCI
+        * SMA
+        * EWMA
+        * Rate of change
+        * Bollingers
+        * Force Index
+        * MACD
 
     :param:
     data: dataframe format from load_pos_data(..., format='df')
@@ -185,3 +197,21 @@ class HistoricTechnicals:
         macd numpy array
         """
         return self.ewma(12) - self.ewma(26)
+
+class LiveTechnicals:
+    """
+    Runs everything within live_feed function. live_feed continuously checks
+    Indicators:
+        * CCI
+
+    :param:
+    None.
+
+    :return:
+    1D numpy array of transformed data.
+    """
+    def __init__(self):
+        self.data =
+
+dgaz = load_pos_data(['DGAZ'], 'df')
+print(dgaz)
