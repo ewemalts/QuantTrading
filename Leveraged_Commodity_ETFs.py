@@ -1,18 +1,17 @@
-from intriniorealtime.client import IntrinioRealtimeClient
+import General
+import numpy as np
+import pandas as pd
 
+pos_list = ['DGAZ', 'UGAZ', 'DSLV', 'USLV', 'DGLD', 'UGLD', 'SCO', 'UCO']
+General.get_prices(pos_list, ['12/12/2012', '2/7/2018'])
+data = General.load_pos_data(pos_list, 'ls')
 
-def on_quote(quote, backlog):
-    print("QUOTE: ", quote, "BACKLOG LENGTH: ", backlog)
+close_prices = np.array([len(pos[5]) for pos in data])
+dates = [list(pos[1]) for pos in data]
+# print(dates)
 
-
-options = {
-    'username': 'YOUR_INTRINIO_API_USERNAME',
-    'password': 'YOUR_INTRINIO_API_PASSWORD',
-    'provider': 'iex',
-    'on_quote': on_quote
-}
-
-client = IntrinioRealtimeClient(options)
-client.join(['AAPL', 'GE', 'MSFT'])
-client.connect()
-client.keep_alive()
+for pos in dates:
+    for date in pos:
+        for i in range(len(dates)):
+            if date not in dates[i]:
+                print(pos_list[i], date)

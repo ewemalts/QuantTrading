@@ -4,6 +4,7 @@ import requests
 import datetime
 import time
 import re
+from dateutil.parser import parse
 import intriniorealtime
 
 
@@ -53,8 +54,8 @@ def get_prices(pos_list, dates):
         assert ('error' not in response.text), 'Dates are out of range for this pos.'
 
         with open(filename, 'wb') as handle:
-            for block in response.iter_content(1024):
-                handle.write(block)
+            for block in response.iter_content(1024):  # encoded as bytes obj
+                handle.write(block)  # save
 
 
 def load_pos_data(pos_list, return_format):
@@ -63,7 +64,7 @@ def load_pos_data(pos_list, return_format):
 
     :param:
     pos_list: list of of tickers you want to load from local (must have the data pre-downloaded)
-    format: "df" (for pandas dataframe), "np" (for numpy array).
+    format: "df" (for pandas dataframe), "ls" (for list).
 
     :return:
     list:
@@ -74,13 +75,20 @@ def load_pos_data(pos_list, return_format):
     # check input format
     assert (type(pos_list) == list and type(return_format) == str), 'Check input formatting.'
 
-    # load the data into pandas for each pos and append to data
+    # load the data into pandas for each pos and append to data (also validate each date)
+    valid_dates = np.array([int(date.strip('\n')) for date in list(open('Valid Dates', 'r'))])
+
     data = []
     for pos in pos_list:
         df = pd.read_csv('%s.csv' % pos)
         df.name = pos
+        # check dates and make sure they are all valid
+        for date in df['Date']:
+            unix_date = int(time.mktime(datetime.datetime.strptime(date, "%Y-%m-%d").timetuple()))
+            if unix_date not in valid_dates:
+                df = df[df.Date != date]  # create a new df without that date
 
-        if return_format == 'np':
+        if return_format == 'ls':
             # transpose the values so each row is a column from the spreadsheet
             values = df.values.T
             date, opn, high, low, close, adjc, volume = values[0], values[1], values[2], values[3], values[4], \
@@ -198,11 +206,18 @@ class HistoricTechnicals:
         """
         return self.ewma(12) - self.ewma(26)
 
+
 class LiveTechnicals:
     """
     Runs everything within live_feed function. live_feed continuously checks
     Indicators:
         * CCI
+        * SMA
+        * EWMA
+        * Rate of change
+        * Bollingers
+        * Force Index
+        * MACD
 
     :param:
     None.
@@ -211,7 +226,5 @@ class LiveTechnicals:
     1D numpy array of transformed data.
     """
     def __init__(self):
-        self.data =
+        self.data = 1
 
-dgaz = load_pos_data(['DGAZ'], 'df')
-print(dgaz)
